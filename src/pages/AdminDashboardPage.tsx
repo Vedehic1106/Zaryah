@@ -3,39 +3,39 @@ import { motion } from 'framer-motion';
 import { 
   Users, 
   Package, 
-  MapPin, 
-  Palette, 
-  CheckCircle, 
-  XCircle, 
-  Clock,
-  Eye,
-  Verified,
-  Truck,
-  Video as VideoIcon,
-  Plus,
+  TrendingUp, 
+  DollarSign, 
+  Eye, 
+  Check, 
+  X, 
   Edit,
   Trash2,
-  Send,
-  Bell,
-  MessageSquare,
-  AlertCircle,
-  TrendingUp,
-  DollarSign,
+  Plus,
+  Settings,
+  BarChart3,
   ShoppingBag,
   Star,
+  MapPin,
+  Calendar,
   Filter,
   Search,
-  Calendar,
   Download,
-  BarChart3
+  RefreshCw
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useApp } from '../contexts/AppContext';
-import { useNotifications } from '../contexts/NotificationContext';
 import { supabase } from '../lib/supabase';
-import toast from 'react-hot-toast';
-import { orderService } from '../services/orderService';
 import { FileUpload } from '../components/FileUpload';
+import toast from 'react-hot-toast';
+
+interface AdminStats {
+  totalUsers: number;
+  totalProducts: number;
+  totalOrders: number;
+  totalRevenue: number;
+  pendingProducts: number;
+  activeUsers: number;
+}
 
 interface HeroVideo {
   id: string;
@@ -47,43 +47,31 @@ interface HeroVideo {
   location: string;
   is_active: boolean;
   order_index: number;
-}
-
-interface NotificationForm {
-  type: 'order' | 'delivery' | 'system' | 'chat' | 'promotion';
-  title: string;
-  message: string;
-  targetUsers: 'all' | 'buyers' | 'sellers';
-}
-
-interface Analytics {
-  totalUsers: number;
-  totalOrders: number;
-  totalRevenue: number;
-  monthlyGrowth: number;
-  topProducts: any[];
-  recentActivity: any[];
+  created_at: string;
 }
 
 export const AdminDashboardPage: React.FC = () => {
   const { user } = useAuth();
-  const { 
-    products, 
-    deliveryCities, 
-    currentTheme,
-    updateProduct, 
-    updateDeliveryCity,
-    updateTheme,
-    refreshData
-  } = useApp();
-  const { createNotification } = useNotifications();
-  
-  const [activeTab, setActiveTab] = useState('overview');
+  const { products, updateProduct, deliveryCities, updateDeliveryCity, currentTheme, updateTheme } = useApp();
+  const [stats, setStats] = useState<AdminStats>({
+    totalUsers: 0,
+    totalProducts: 0,
+    totalOrders: 0,
+    totalRevenue: 0,
+    pendingProducts: 0,
+    activeUsers: 0
+  });
   const [heroVideos, setHeroVideos] = useState<HeroVideo[]>([]);
-  const [showVideoForm, setShowVideoForm] = useState(false);
-  const [editingVideo, setEditingVideo] = useState<HeroVideo | null>(null);
-  const [showNotificationForm, setShowNotificationForm] = useState(false);
-  const [videoForm, setVideoForm] = useState({
+  const [activeTab, setActiveTab] = useState<'overview' | 'products' | 'users' | 'orders' | 'hero-videos' | 'settings'>('overview');
+  const [selectedProduct, setSelectedProduct] = useState<any>(null);
+  const [showProductModal, setShowProductModal] = useState(false);
+  const [showHeroVideoModal, setShowHeroVideoModal] = useState(false);
+  const [selectedHeroVideo, setSelectedHeroVideo] = useState<HeroVideo | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+
+  const [heroVideoForm, setHeroVideoForm] = useState({
     title: '',
     description: '',
     video_url: '',
@@ -91,97 +79,47 @@ export const AdminDashboardPage: React.FC = () => {
     maker_name: '',
     location: '',
     is_active: true,
-    order_index: 1
+    order_index: 0
   });
-  const [notificationForm, setNotificationForm] = useState<NotificationForm>({
-    type: 'system',
-    title: '',
-    message: '',
-    targetUsers: 'all'
-  });
-  const [orders, setOrders] = useState<any[]>([]);
-  const [isOrdersLoading, setIsOrdersLoading] = useState(false);
-  const [supportTickets, setSupportTickets] = useState<any[]>([]);
-  const [selectedTicket, setSelectedTicket] = useState<any | null>(null);
-  const [ticketMessages, setTicketMessages] = useState<any[]>([]);
-  const [newSupportMessage, setNewSupportMessage] = useState('');
-  const [isSupportLoading, setIsSupportLoading] = useState(false);
-  const [videoFile, setVideoFile] = useState<File | null>(null);
-  const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
-  const [videoUploading, setVideoUploading] = useState(false);
-  const [thumbnailUploading, setThumbnailUploading] = useState(false);
-  const [analytics, setAnalytics] = useState<Analytics | null>(null);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
-  const [dateFilter, setDateFilter] = useState('all');
-
-  const pendingProducts = products.filter(p => p.status === 'pending');
-  const approvedProducts = products.filter(p => p.status === 'approved');
-  const rejectedProducts = products.filter(p => p.status === 'rejected');
 
   useEffect(() => {
-    fetchAnalytics();
-    if (activeTab === 'videos') {
+    if (user?.role === 'admin') {
+      fetchAdminStats();
       fetchHeroVideos();
     }
-    if (activeTab === 'orders') {
-      fetchAllOrders();
-    }
-    if (activeTab === 'support') {
-      fetchAllSupportTickets();
-    }
-  }, [activeTab]);
+  }, [user]);
 
-  const fetchAnalytics = async () => {
+  const fetchAdminStats = async () => {
+    setIsLoading(true);
     try {
       // Fetch users count
       const { count: usersCount } = await supabase
         .from('profiles')
         .select('*', { count: 'exact', head: true });
 
-      // Fetch orders
-      const allOrders = await orderService.getAllOrders();
-      const totalRevenue = allOrders.reduce((sum, order) => sum + (order.total_amount / 100), 0);
+      // Fetch orders count and revenue
+      const { data: orders } = await supabase
+        .from('orders')
+        .select('total_amount');
 
-      // Calculate monthly growth (mock data for demo)
-      const monthlyGrowth = 15.2;
+      const totalOrders = orders?.length || 0;
+      const totalRevenue = orders?.reduce((sum, order) => sum + (order.total_amount / 100), 0) || 0;
 
-      // Get top products by order frequency
-      const productOrderCount: Record<string, number> = {};
-      allOrders.forEach(order => {
-        order.items.forEach((item: any) => {
-          const productId = item.product.id;
-          productOrderCount[productId] = (productOrderCount[productId] || 0) + item.quantity;
-        });
-      });
+      // Fetch pending products
+      const pendingProducts = products.filter(p => p.status === 'pending').length;
 
-      const topProducts = Object.entries(productOrderCount)
-        .sort(([,a], [,b]) => b - a)
-        .slice(0, 5)
-        .map(([productId, count]) => {
-          const product = products.find(p => p.id === productId);
-          return { product, orderCount: count };
-        })
-        .filter(item => item.product);
-
-      // Recent activity (last 10 orders)
-      const recentActivity = allOrders.slice(0, 10).map(order => ({
-        type: 'order',
-        description: `New order #${order.id.slice(-8)} - ₹${(order.total_amount / 100).toLocaleString()}`,
-        timestamp: order.created_at,
-        status: order.status
-      }));
-
-      setAnalytics({
+      setStats({
         totalUsers: usersCount || 0,
-        totalOrders: allOrders.length,
+        totalProducts: products.length,
+        totalOrders,
         totalRevenue,
-        monthlyGrowth,
-        topProducts,
-        recentActivity
+        pendingProducts,
+        activeUsers: usersCount || 0 // Simplified for demo
       });
     } catch (error) {
-      console.error('Error fetching analytics:', error);
+      console.error('Error fetching admin stats:', error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -192,134 +130,46 @@ export const AdminDashboardPage: React.FC = () => {
         .select('*')
         .order('order_index');
 
-      if (error) {
-        console.error('Error fetching hero videos:', error);
-        return;
-      }
-
+      if (error) throw error;
       setHeroVideos(data || []);
     } catch (error) {
-      console.error('Error in fetchHeroVideos:', error);
+      console.error('Error fetching hero videos:', error);
     }
   };
 
-  const fetchAllOrders = async () => {
-    setIsOrdersLoading(true);
-    try {
-      const allOrders = await orderService.getAllOrders();
-      setOrders(allOrders);
-    } catch (err) {
-      setOrders([]);
-    } finally {
-      setIsOrdersLoading(false);
-    }
-  };
-
-  const fetchAllSupportTickets = async () => {
-    setIsSupportLoading(true);
-    try {
-      const { data, error } = await supabase
-        .from('support_tickets')
-        .select('*, user:profiles!support_tickets_user_id_fkey (name, email, id)')
-        .order('updated_at', { ascending: false });
-      setSupportTickets(data || []);
-    } catch (err) {
-      setSupportTickets([]);
-    } finally {
-      setIsSupportLoading(false);
-    }
-  };
-
-  const fetchTicketMessages = async (ticketId: string) => {
-    setIsSupportLoading(true);
-    try {
-      const { data, error } = await supabase
-        .from('support_messages')
-        .select('*, user:profiles!support_messages_user_id_fkey (name, role)')
-        .eq('ticket_id', ticketId)
-        .order('created_at', { ascending: true });
-      setTicketMessages(data || []);
-    } catch (err) {
-      setTicketMessages([]);
-    } finally {
-      setIsSupportLoading(false);
-    }
-  };
-
-  const handleProductApproval = async (productId: string, status: 'approved' | 'rejected') => {
+  const handleProductStatusUpdate = async (productId: string, status: 'approved' | 'rejected') => {
     const success = await updateProduct(productId, { status });
     if (success) {
-      toast.success(`Product ${status} successfully`);
-      
-      // Send notification to seller
-      const product = products.find(p => p.id === productId);
-      if (product) {
-        await createNotification({
-          type: 'system',
-          title: `Product ${status}`,
-          message: `Your product "${product.name}" has been ${status} by admin.`,
-          data: { product_id: productId, status }
-        });
-      }
-      await refreshData();
-    } else {
-      toast.error('Failed to update product status');
+      toast.success(`Product ${status} successfully!`);
+      fetchAdminStats();
     }
   };
 
-  const handleDeliveryCityToggle = async (cityId: string, isActive: boolean) => {
-    const success = await updateDeliveryCity(cityId, isActive);
-    if (success) {
-      toast.success(`Delivery city ${isActive ? 'activated' : 'deactivated'}`);
-    } else {
-      toast.error('Failed to update delivery city');
-    }
-  };
-
-  const handleThemeChange = async (themeName: string) => {
-    const success = await updateTheme(themeName);
-    if (success) {
-      toast.success('Theme updated successfully');
-    } else {
-      toast.error('Failed to update theme');
-    }
-  };
-
-  const uploadToStorage = async (file: File, pathPrefix: string) => {
-    const fileExt = file.name.split('.').pop();
-    const fileName = `${pathPrefix}_${Date.now()}.${fileExt}`;
-    const { data, error } = await supabase.storage.from('hero-videos').upload(fileName, file, { upsert: true });
-    if (error) throw error;
-    const { data: urlData } = supabase.storage.from('hero-videos').getPublicUrl(fileName);
-    return urlData.publicUrl;
-  };
-
-  const handleVideoSubmit = async (e: React.FormEvent) => {
+  const handleHeroVideoSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      let videoUrl = videoForm.video_url;
-      let thumbnailUrl = videoForm.thumbnail_url;
-      if (videoFile) {
-        setVideoUploading(true);
-        videoUrl = await uploadToStorage(videoFile, 'video');
-        setVideoUploading(false);
-      }
-      if (thumbnailFile) {
-        setThumbnailUploading(true);
-        thumbnailUrl = await uploadToStorage(thumbnailFile, 'thumbnail');
-        setThumbnailUploading(false);
-      }
-      const formToSave = { ...videoForm, video_url: videoUrl, thumbnail_url: thumbnailUrl };
-      if (editingVideo) {
-        const { error } = await supabase.from('hero_videos').update(formToSave).eq('id', editingVideo.id);
+      if (selectedHeroVideo) {
+        // Update existing video
+        const { error } = await supabase
+          .from('hero_videos')
+          .update(heroVideoForm)
+          .eq('id', selectedHeroVideo.id);
+
         if (error) throw error;
-        toast.success('Video updated successfully');
+        toast.success('Hero video updated successfully!');
       } else {
-        const { error } = await supabase.from('hero_videos').insert([formToSave]);
+        // Create new video
+        const { error } = await supabase
+          .from('hero_videos')
+          .insert(heroVideoForm);
+
         if (error) throw error;
-        toast.success('Video added successfully');
+        toast.success('Hero video created successfully!');
       }
-      setVideoForm({
+
+      setShowHeroVideoModal(false);
+      setSelectedHeroVideo(null);
+      setHeroVideoForm({
         title: '',
         description: '',
         video_url: '',
@@ -327,138 +177,31 @@ export const AdminDashboardPage: React.FC = () => {
         maker_name: '',
         location: '',
         is_active: true,
-        order_index: 1
+        order_index: 0
       });
-      setVideoFile(null);
-      setThumbnailFile(null);
-      setShowVideoForm(false);
-      setEditingVideo(null);
       fetchHeroVideos();
     } catch (error) {
-      setVideoUploading(false);
-      setThumbnailUploading(false);
-      console.error('Error saving video:', error);
-      toast.error('Failed to save video');
+      console.error('Error saving hero video:', error);
+      toast.error('Failed to save hero video');
     }
   };
 
-  const handleDeleteVideo = async (videoId: string) => {
-    if (confirm('Are you sure you want to delete this video?')) {
-      try {
-        const { error } = await supabase
-          .from('hero_videos')
-          .delete()
-          .eq('id', videoId);
+  const handleDeleteHeroVideo = async (videoId: string) => {
+    if (!confirm('Are you sure you want to delete this hero video?')) return;
 
-        if (error) throw error;
-        toast.success('Video deleted successfully');
-        fetchHeroVideos();
-      } catch (error) {
-        console.error('Error deleting video:', error);
-        toast.error('Failed to delete video');
-      }
-    }
-  };
-
-  const handleEditVideo = (video: HeroVideo) => {
-    setEditingVideo(video);
-    setVideoForm({
-      title: video.title,
-      description: video.description,
-      video_url: video.video_url,
-      thumbnail_url: video.thumbnail_url,
-      maker_name: video.maker_name,
-      location: video.location,
-      is_active: video.is_active,
-      order_index: video.order_index
-    });
-    setShowVideoForm(true);
-  };
-
-  const handleSendNotification = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
     try {
-      // Get target users based on selection
-      let targetUserIds: string[] = [];
-      
-      if (notificationForm.targetUsers === 'all') {
-        const { data } = await supabase
-          .from('profiles')
-          .select('id');
-        targetUserIds = data?.map(p => p.id) || [];
-      } else {
-        const { data } = await supabase
-          .from('profiles')
-          .select('id')
-          .eq('role', notificationForm.targetUsers === 'buyers' ? 'buyer' : 'seller');
-        targetUserIds = data?.map(p => p.id) || [];
-      }
-
-      // Send notification to each user
-      const notifications = targetUserIds.map(userId => ({
-        user_id: userId,
-        type: notificationForm.type,
-        title: notificationForm.title,
-        message: notificationForm.message,
-        data: { sent_by: 'admin', timestamp: new Date().toISOString() }
-      }));
-
       const { error } = await supabase
-        .from('notifications')
-        .insert(notifications);
+        .from('hero_videos')
+        .delete()
+        .eq('id', videoId);
 
       if (error) throw error;
-
-      toast.success(`Notification sent to ${targetUserIds.length} users`);
-      setNotificationForm({
-        type: 'system',
-        title: '',
-        message: '',
-        targetUsers: 'all'
-      });
-      setShowNotificationForm(false);
+      toast.success('Hero video deleted successfully!');
+      fetchHeroVideos();
     } catch (error) {
-      console.error('Error sending notification:', error);
-      toast.error('Failed to send notification');
+      console.error('Error deleting hero video:', error);
+      toast.error('Failed to delete hero video');
     }
-  };
-
-  const handleSelectTicket = (ticket: any) => {
-    setSelectedTicket(ticket);
-    fetchTicketMessages(ticket.id);
-  };
-
-  const handleSendSupportMessage = async () => {
-    if (!selectedTicket || !newSupportMessage.trim()) return;
-    setIsSupportLoading(true);
-    try {
-      const { error } = await supabase
-        .from('support_messages')
-        .insert({
-          ticket_id: selectedTicket.id,
-          user_id: user!.id,
-          message: newSupportMessage,
-          is_staff: true
-        });
-      setNewSupportMessage('');
-      fetchTicketMessages(selectedTicket.id);
-    } catch (err) {}
-    setIsSupportLoading(false);
-  };
-
-  const handleUpdateTicketStatus = async (status: string) => {
-    if (!selectedTicket) return;
-    setIsSupportLoading(true);
-    try {
-      await supabase
-        .from('support_tickets')
-        .update({ status, updated_at: new Date().toISOString() })
-        .eq('id', selectedTicket.id);
-      setSelectedTicket({ ...selectedTicket, status });
-      fetchAllSupportTickets();
-    } catch (err) {}
-    setIsSupportLoading(false);
   };
 
   const filteredProducts = products.filter(product => {
@@ -468,238 +211,195 @@ export const AdminDashboardPage: React.FC = () => {
     return matchesSearch && matchesStatus;
   });
 
-  const filteredOrders = orders.filter(order => {
-    const matchesSearch = order.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         order.buyer?.name.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesDate = dateFilter === 'all' || 
-                       (dateFilter === 'today' && new Date(order.created_at).toDateString() === new Date().toDateString()) ||
-                       (dateFilter === 'week' && new Date(order.created_at) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000));
-    return matchesSearch && matchesDate;
-  });
+  const StatCard = ({ title, value, icon: Icon, color, change }: any) => (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      className={`bg-white rounded-2xl p-6 shadow-soft border border-primary-100`}
+    >
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-primary-600 text-sm font-medium">{title}</p>
+          <p className="text-2xl font-bold text-primary-900 mt-1">{value}</p>
+          {change && (
+            <p className={`text-sm mt-1 ${change > 0 ? 'text-green-600' : 'text-red-600'}`}>
+              {change > 0 ? '+' : ''}{change}% from last month
+            </p>
+          )}
+        </div>
+        <div className={`p-3 rounded-xl ${color}`}>
+          <Icon className="w-6 h-6 text-white" />
+        </div>
+      </div>
+    </motion.div>
+  );
 
-  const tabs = [
-    { id: 'overview', name: 'Overview', icon: BarChart3 },
-    { id: 'products', name: 'Products', icon: Package },
-    { id: 'orders', name: 'Orders', icon: ShoppingBag },
-    { id: 'videos', name: 'Hero Videos', icon: VideoIcon },
-    { id: 'support', name: 'Support', icon: MessageSquare },
-    { id: 'notifications', name: 'Notifications', icon: Bell },
-    { id: 'settings', name: 'Settings', icon: MapPin }
-  ];
-
-  const stats = [
-    { 
-      label: 'Total Users', 
-      value: analytics?.totalUsers || 0, 
-      icon: Users, 
-      color: 'bg-blue-600',
-      change: '+12%',
-      changeType: 'positive' as const
-    },
-    { 
-      label: 'Total Orders', 
-      value: analytics?.totalOrders || 0, 
-      icon: ShoppingBag, 
-      color: 'bg-green-600',
-      change: '+8%',
-      changeType: 'positive' as const
-    },
-    { 
-      label: 'Revenue', 
-      value: `₹${analytics?.totalRevenue.toLocaleString() || 0}`, 
-      icon: DollarSign, 
-      color: 'bg-purple-600',
-      change: `+${analytics?.monthlyGrowth || 0}%`,
-      changeType: 'positive' as const
-    },
-    { 
-      label: 'Pending Reviews', 
-      value: pendingProducts.length, 
-      icon: Clock, 
-      color: 'bg-amber-600',
-      change: '-5%',
-      changeType: 'negative' as const
-    }
-  ];
+  if (user?.role !== 'admin') {
+    return (
+      <div className="min-h-screen bg-gradient-elegant flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-primary-900 mb-4">Access Denied</h1>
+          <p className="text-primary-600">You don't have permission to access this page.</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen w-full flex bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-100">
-      {/* Enhanced Sidebar */}
-      <aside className="w-64 min-h-screen bg-white/90 backdrop-blur-sm shadow-xl border-r border-blue-100 flex flex-col py-8 px-4 fixed z-20">
-        <div className="mb-10">
-          <div className="flex items-center space-x-3 mb-2">
-            <div className="bg-blue-600 p-2 rounded-xl">
-              <Users className="w-6 h-6 text-white" />
-            </div>
+    <div className="min-h-screen bg-gradient-elegant">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Header */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-8"
+        >
+          <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-xl font-bold text-blue-900">Admin Panel</h1>
-              <p className="text-xs text-blue-600">GiftFlare Management</p>
+              <h1 className="text-3xl font-bold text-primary-900">Admin Dashboard</h1>
+              <p className="text-primary-600 mt-1">Manage your platform and monitor performance</p>
             </div>
+            <button
+              onClick={fetchAdminStats}
+              className="flex items-center space-x-2 bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-xl transition-colors"
+            >
+              <RefreshCw className="w-4 h-4" />
+              <span>Refresh</span>
+            </button>
+          </div>
+        </motion.div>
+
+        {/* Navigation Tabs */}
+        <div className="mb-8">
+          <div className="border-b border-primary-200">
+            <nav className="-mb-px flex space-x-8">
+              {[
+                { id: 'overview', name: 'Overview', icon: BarChart3 },
+                { id: 'products', name: 'Products', icon: Package },
+                { id: 'users', name: 'Users', icon: Users },
+                { id: 'hero-videos', name: 'Hero Videos', icon: Eye },
+                { id: 'settings', name: 'Settings', icon: Settings }
+              ].map((tab) => {
+                const Icon = tab.icon;
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id as any)}
+                    className={`flex items-center space-x-2 py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
+                      activeTab === tab.id
+                        ? 'border-primary-500 text-primary-600'
+                        : 'border-transparent text-primary-500 hover:text-primary-700 hover:border-primary-300'
+                    }`}
+                  >
+                    <Icon className="w-4 h-4" />
+                    <span>{tab.name}</span>
+                  </button>
+                );
+              })}
+            </nav>
           </div>
         </div>
-        
-        <nav className="flex flex-col gap-2 flex-1">
-          {tabs.map((tab) => {
-            const Icon = tab.icon;
-            return (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-3 px-4 py-3 rounded-lg font-semibold transition-all relative ${
-                  activeTab === tab.id 
-                    ? 'bg-blue-600 text-white shadow-lg' 
-                    : 'text-blue-700 hover:bg-blue-100'
-                }`}
-              >
-                {activeTab === tab.id && (
-                  <span className="absolute left-0 top-0 h-full w-1 bg-blue-500 rounded-r-lg" />
-                )}
-                <Icon className="w-5 h-5" />
-                {tab.name}
-                {tab.id === 'products' && pendingProducts.length > 0 && (
-                  <span className="ml-auto bg-red-500 text-white text-xs px-2 py-1 rounded-full">
-                    {pendingProducts.length}
-                  </span>
-                )}
-              </button>
-            );
-          })}
-        </nav>
 
-        <div className="mt-auto pt-4 border-t border-blue-100">
-          <div className="text-xs text-blue-600 text-center">
-            Logged in as {user?.name}
-          </div>
-        </div>
-      </aside>
-
-      {/* Main Content */}
-      <main className="flex-1 ml-64 min-h-screen flex flex-col">
-        <div className="flex-1 p-8 overflow-y-auto">
-          {/* Overview Tab */}
+        {/* Tab Content */}
+        <div className="space-y-8">
           {activeTab === 'overview' && (
-            <div className="space-y-8">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="text-3xl font-bold text-blue-900">Dashboard Overview</h2>
-                  <p className="text-blue-700 mt-1">Welcome back, {user?.name}</p>
-                </div>
-                <div className="flex items-center space-x-4">
-                  <button className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2">
-                    <Download className="w-4 h-4" />
-                    <span>Export Report</span>
+            <>
+              {/* Stats Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <StatCard
+                  title="Total Users"
+                  value={stats.totalUsers.toLocaleString()}
+                  icon={Users}
+                  color="bg-primary-600"
+                  change={12}
+                />
+                <StatCard
+                  title="Total Products"
+                  value={stats.totalProducts.toLocaleString()}
+                  icon={Package}
+                  color="bg-secondary-600"
+                  change={8}
+                />
+                <StatCard
+                  title="Total Orders"
+                  value={stats.totalOrders.toLocaleString()}
+                  icon={ShoppingBag}
+                  color="bg-accent-600"
+                  change={15}
+                />
+                <StatCard
+                  title="Revenue"
+                  value={`₹${stats.totalRevenue.toLocaleString()}`}
+                  icon={DollarSign}
+                  color="bg-success-600"
+                  change={23}
+                />
+              </div>
+
+              {/* Quick Actions */}
+              <div className="bg-white rounded-2xl p-6 shadow-soft border border-primary-100">
+                <h3 className="text-lg font-semibold text-primary-900 mb-4">Quick Actions</h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <button
+                    onClick={() => setActiveTab('products')}
+                    className="flex items-center space-x-3 p-4 bg-primary-50 rounded-xl hover:bg-primary-100 transition-colors"
+                  >
+                    <Package className="w-5 h-5 text-primary-600" />
+                    <div className="text-left">
+                      <p className="font-medium text-primary-900">Review Products</p>
+                      <p className="text-sm text-primary-600">{stats.pendingProducts} pending</p>
+                    </div>
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('hero-videos')}
+                    className="flex items-center space-x-3 p-4 bg-secondary-50 rounded-xl hover:bg-secondary-100 transition-colors"
+                  >
+                    <Eye className="w-5 h-5 text-secondary-600" />
+                    <div className="text-left">
+                      <p className="font-medium text-secondary-900">Manage Videos</p>
+                      <p className="text-sm text-secondary-600">{heroVideos.length} videos</p>
+                    </div>
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('settings')}
+                    className="flex items-center space-x-3 p-4 bg-accent-50 rounded-xl hover:bg-accent-100 transition-colors"
+                  >
+                    <Settings className="w-5 h-5 text-accent-600" />
+                    <div className="text-left">
+                      <p className="font-medium text-accent-900">Platform Settings</p>
+                      <p className="text-sm text-accent-600">Configure system</p>
+                    </div>
                   </button>
                 </div>
               </div>
-
-              {/* Stats Grid */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                {stats.map((stat, index) => {
-                  const Icon = stat.icon;
-                  return (
-                    <motion.div
-                      key={stat.label}
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: index * 0.1 }}
-                      className="bg-white p-6 rounded-2xl shadow-sm border border-blue-100 hover:shadow-md transition-shadow"
-                    >
-                      <div className="flex items-center justify-between mb-4">
-                        <div className={`${stat.color} p-3 rounded-xl`}>
-                          <Icon className="w-6 h-6 text-white" />
-                        </div>
-                        <div className={`text-xs font-medium px-2 py-1 rounded-full ${
-                          stat.changeType === 'positive' 
-                            ? 'bg-green-100 text-green-700' 
-                            : 'bg-red-100 text-red-700'
-                        }`}>
-                          {stat.change}
-                        </div>
-                      </div>
-                      <div>
-                        <p className="text-2xl font-bold text-blue-900 mb-1">{stat.value}</p>
-                        <p className="text-sm text-blue-700">{stat.label}</p>
-                      </div>
-                    </motion.div>
-                  );
-                })}
-              </div>
-
-              {/* Charts and Analytics */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                {/* Top Products */}
-                <div className="bg-white rounded-2xl shadow-sm border border-blue-100 p-6">
-                  <h3 className="text-lg font-semibold text-blue-900 mb-4">Top Products</h3>
-                  <div className="space-y-4">
-                    {analytics?.topProducts.slice(0, 5).map((item, index) => (
-                      <div key={index} className="flex items-center space-x-4">
-                        <img
-                          src={item.product.image}
-                          alt={item.product.name}
-                          className="w-12 h-12 rounded-lg object-cover"
-                        />
-                        <div className="flex-1">
-                          <h4 className="font-medium text-blue-900">{item.product.name}</h4>
-                          <p className="text-sm text-blue-600">{item.orderCount} orders</p>
-                        </div>
-                        <div className="text-right">
-                          <p className="font-semibold text-blue-900">₹{item.product.price.toLocaleString()}</p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Recent Activity */}
-                <div className="bg-white rounded-2xl shadow-sm border border-blue-100 p-6">
-                  <h3 className="text-lg font-semibold text-blue-900 mb-4">Recent Activity</h3>
-                  <div className="space-y-4">
-                    {analytics?.recentActivity.slice(0, 5).map((activity, index) => (
-                      <div key={index} className="flex items-start space-x-3">
-                        <div className="bg-blue-100 p-2 rounded-lg">
-                          <ShoppingBag className="w-4 h-4 text-blue-600" />
-                        </div>
-                        <div className="flex-1">
-                          <p className="text-sm text-blue-900">{activity.description}</p>
-                          <p className="text-xs text-blue-600">
-                            {new Date(activity.timestamp).toLocaleString()}
-                          </p>
-                        </div>
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                          activity.status === 'delivered' ? 'bg-green-100 text-green-700' :
-                          activity.status === 'shipped' ? 'bg-blue-100 text-blue-700' :
-                          'bg-yellow-100 text-yellow-700'
-                        }`}>
-                          {activity.status}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
+            </>
           )}
 
-          {/* Products Tab */}
           {activeTab === 'products' && (
-            <div className="space-y-6">
-              <div className="flex items-center justify-between">
-                <h2 className="text-3xl font-bold text-blue-900">Product Management</h2>
-                <div className="flex items-center space-x-4">
-                  <div className="relative">
-                    <Search className="w-5 h-5 text-blue-500 absolute left-3 top-3" />
-                    <input
-                      type="text"
-                      placeholder="Search products..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="pl-10 pr-4 py-2 border border-blue-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    />
+            <div className="bg-white rounded-2xl shadow-soft border border-primary-100">
+              <div className="p-6 border-b border-primary-200">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold text-primary-900">Product Management</h3>
+                </div>
+                
+                {/* Filters */}
+                <div className="flex flex-col sm:flex-row gap-4">
+                  <div className="flex-1">
+                    <div className="relative">
+                      <Search className="w-4 h-4 text-primary-400 absolute left-3 top-3" />
+                      <input
+                        type="text"
+                        placeholder="Search products..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="w-full pl-10 pr-4 py-2 border border-primary-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                      />
+                    </div>
                   </div>
                   <select
                     value={statusFilter}
                     onChange={(e) => setStatusFilter(e.target.value)}
-                    className="border border-blue-200 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="border border-primary-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                   >
                     <option value="all">All Status</option>
                     <option value="pending">Pending</option>
@@ -709,669 +409,336 @@ export const AdminDashboardPage: React.FC = () => {
                 </div>
               </div>
 
-              <div className="bg-white rounded-2xl shadow-sm border border-blue-100 overflow-hidden">
-                <div className="overflow-x-auto">
-                  <table className="min-w-full">
-                    <thead className="bg-blue-50">
-                      <tr>
-                        <th className="px-6 py-4 text-left text-sm font-semibold text-blue-900">Product</th>
-                        <th className="px-6 py-4 text-left text-sm font-semibold text-blue-900">Seller</th>
-                        <th className="px-6 py-4 text-left text-sm font-semibold text-blue-900">Price</th>
-                        <th className="px-6 py-4 text-left text-sm font-semibold text-blue-900">Status</th>
-                        <th className="px-6 py-4 text-left text-sm font-semibold text-blue-900">Date</th>
-                        <th className="px-6 py-4 text-left text-sm font-semibold text-blue-900">Actions</th>
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-primary-50">
+                    <tr>
+                      <th className="text-left py-3 px-6 font-medium text-primary-900">Product</th>
+                      <th className="text-left py-3 px-6 font-medium text-primary-900">Seller</th>
+                      <th className="text-left py-3 px-6 font-medium text-primary-900">Price</th>
+                      <th className="text-left py-3 px-6 font-medium text-primary-900">Status</th>
+                      <th className="text-left py-3 px-6 font-medium text-primary-900">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredProducts.map((product) => (
+                      <tr key={product.id} className="border-b border-primary-100 hover:bg-primary-25">
+                        <td className="py-4 px-6">
+                          <div className="flex items-center space-x-3">
+                            <img
+                              src={product.image}
+                              alt={product.name}
+                              className="w-12 h-12 rounded-lg object-cover"
+                            />
+                            <div>
+                              <p className="font-medium text-primary-900">{product.name}</p>
+                              <p className="text-sm text-primary-600">{product.category}</p>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="py-4 px-6 text-primary-700">{product.sellerName}</td>
+                        <td className="py-4 px-6 font-medium text-primary-900">₹{product.price.toLocaleString()}</td>
+                        <td className="py-4 px-6">
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                            product.status === 'approved' ? 'bg-green-100 text-green-800' :
+                            product.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                            'bg-red-100 text-red-800'
+                          }`}>
+                            {product.status}
+                          </span>
+                        </td>
+                        <td className="py-4 px-6">
+                          <div className="flex items-center space-x-2">
+                            {product.status === 'pending' && (
+                              <>
+                                <button
+                                  onClick={() => handleProductStatusUpdate(product.id, 'approved')}
+                                  className="text-green-600 hover:text-green-800 p-1"
+                                  title="Approve"
+                                >
+                                  <Check className="w-4 h-4" />
+                                </button>
+                                <button
+                                  onClick={() => handleProductStatusUpdate(product.id, 'rejected')}
+                                  className="text-red-600 hover:text-red-800 p-1"
+                                  title="Reject"
+                                >
+                                  <X className="w-4 h-4" />
+                                </button>
+                              </>
+                            )}
+                            <button
+                              onClick={() => {
+                                setSelectedProduct(product);
+                                setShowProductModal(true);
+                              }}
+                              className="text-primary-600 hover:text-primary-800 p-1"
+                              title="View Details"
+                            >
+                              <Eye className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </td>
                       </tr>
-                    </thead>
-                    <tbody className="divide-y divide-blue-100">
-                      {filteredProducts.map((product) => (
-                        <tr key={product.id} className="hover:bg-blue-50 transition-colors">
-                          <td className="px-6 py-4">
-                            <div className="flex items-center space-x-3">
-                              <img
-                                src={product.image}
-                                alt={product.name}
-                                className="w-12 h-12 rounded-lg object-cover"
-                              />
-                              <div>
-                                <h4 className="font-medium text-blue-900">{product.name}</h4>
-                                <p className="text-sm text-blue-600">{product.category}</p>
-                              </div>
-                            </div>
-                          </td>
-                          <td className="px-6 py-4">
-                            <div className="flex items-center space-x-2">
-                              <span className="text-blue-900">{product.sellerName}</span>
-                              {product.instantDeliveryEligible && (
-                                <Truck className="w-4 h-4 text-green-500" />
-                              )}
-                            </div>
-                          </td>
-                          <td className="px-6 py-4 font-semibold text-blue-900">
-                            ₹{product.price.toLocaleString()}
-                          </td>
-                          <td className="px-6 py-4">
-                            <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                              product.status === 'approved' ? 'bg-green-100 text-green-700' :
-                              product.status === 'rejected' ? 'bg-red-100 text-red-700' :
-                              'bg-yellow-100 text-yellow-700'
-                            }`}>
-                              {product.status}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 text-sm text-blue-600">
-                            {new Date(product.createdAt).toLocaleDateString()}
-                          </td>
-                          <td className="px-6 py-4">
-                            <div className="flex items-center space-x-2">
-                              {product.status === 'pending' && (
-                                <>
-                                  <button
-                                    onClick={() => handleProductApproval(product.id, 'approved')}
-                                    className="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded-lg text-sm transition-colors"
-                                  >
-                                    Approve
-                                  </button>
-                                  <button
-                                    onClick={() => handleProductApproval(product.id, 'rejected')}
-                                    className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded-lg text-sm transition-colors"
-                                  >
-                                    Reject
-                                  </button>
-                                </>
-                              )}
-                              <button className="text-blue-600 hover:text-blue-800 p-1">
-                                <Eye className="w-4 h-4" />
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             </div>
           )}
 
-          {/* Orders Tab */}
-          {activeTab === 'orders' && (
-            <div className="space-y-6">
-              <div className="flex items-center justify-between">
-                <h2 className="text-3xl font-bold text-blue-900">Order Management</h2>
-                <div className="flex items-center space-x-4">
-                  <div className="relative">
-                    <Search className="w-5 h-5 text-blue-500 absolute left-3 top-3" />
-                    <input
-                      type="text"
-                      placeholder="Search orders..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="pl-10 pr-4 py-2 border border-blue-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    />
-                  </div>
-                  <select
-                    value={dateFilter}
-                    onChange={(e) => setDateFilter(e.target.value)}
-                    className="border border-blue-200 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          {activeTab === 'hero-videos' && (
+            <div className="bg-white rounded-2xl shadow-soft border border-primary-100">
+              <div className="p-6 border-b border-primary-200">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-semibold text-primary-900">Hero Videos Management</h3>
+                  <button
+                    onClick={() => {
+                      setSelectedHeroVideo(null);
+                      setHeroVideoForm({
+                        title: '',
+                        description: '',
+                        video_url: '',
+                        thumbnail_url: '',
+                        maker_name: '',
+                        location: '',
+                        is_active: true,
+                        order_index: heroVideos.length
+                      });
+                      setShowHeroVideoModal(true);
+                    }}
+                    className="flex items-center space-x-2 bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-lg transition-colors"
                   >
-                    <option value="all">All Time</option>
-                    <option value="today">Today</option>
-                    <option value="week">This Week</option>
-                  </select>
+                    <Plus className="w-4 h-4" />
+                    <span>Add Video</span>
+                  </button>
                 </div>
               </div>
 
-              <div className="bg-white rounded-2xl shadow-sm border border-blue-100 overflow-hidden">
-                {isOrdersLoading ? (
-                  <div className="p-8 text-center">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-                    <p className="text-blue-600 mt-2">Loading orders...</p>
-                  </div>
-                ) : (
-                  <div className="overflow-x-auto">
-                    <table className="min-w-full">
-                      <thead className="bg-blue-50">
-                        <tr>
-                          <th className="px-6 py-4 text-left text-sm font-semibold text-blue-900">Order ID</th>
-                          <th className="px-6 py-4 text-left text-sm font-semibold text-blue-900">Customer</th>
-                          <th className="px-6 py-4 text-left text-sm font-semibold text-blue-900">Items</th>
-                          <th className="px-6 py-4 text-left text-sm font-semibold text-blue-900">Total</th>
-                          <th className="px-6 py-4 text-left text-sm font-semibold text-blue-900">Status</th>
-                          <th className="px-6 py-4 text-left text-sm font-semibold text-blue-900">Date</th>
-                          <th className="px-6 py-4 text-left text-sm font-semibold text-blue-900">Actions</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-blue-100">
-                        {filteredOrders.map((order) => (
-                          <tr key={order.id} className="hover:bg-blue-50 transition-colors">
-                            <td className="px-6 py-4 font-mono text-sm">
-                              #{order.id.slice(-8).toUpperCase()}
-                            </td>
-                            <td className="px-6 py-4">
-                              <div>
-                                <p className="font-medium text-blue-900">{order.buyer?.name || 'Unknown'}</p>
-                                <p className="text-sm text-blue-600">{order.buyer?.email}</p>
-                              </div>
-                            </td>
-                            <td className="px-6 py-4">
-                              <div className="space-y-1">
-                                {order.items.slice(0, 2).map((item: any, idx: number) => (
-                                  <div key={idx} className="text-sm">
-                                    <span className="text-blue-900">{item.product?.name}</span>
-                                    <span className="text-blue-600"> x{item.quantity}</span>
-                                  </div>
-                                ))}
-                                {order.items.length > 2 && (
-                                  <p className="text-xs text-blue-600">+{order.items.length - 2} more</p>
-                                )}
-                              </div>
-                            </td>
-                            <td className="px-6 py-4 font-semibold text-blue-900">
-                              ₹{(order.total_amount / 100).toLocaleString()}
-                            </td>
-                            <td className="px-6 py-4">
-                              <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                                order.status === 'delivered' ? 'bg-green-100 text-green-700' :
-                                order.status === 'shipped' ? 'bg-blue-100 text-blue-700' :
-                                order.status === 'confirmed' ? 'bg-purple-100 text-purple-700' :
-                                'bg-yellow-100 text-yellow-700'
-                              }`}>
-                                {order.status}
-                              </span>
-                            </td>
-                            <td className="px-6 py-4 text-sm text-blue-600">
-                              {new Date(order.created_at).toLocaleDateString()}
-                            </td>
-                            <td className="px-6 py-4">
-                              <button className="text-blue-600 hover:text-blue-800 p-1">
-                                <Eye className="w-4 h-4" />
-                              </button>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* Hero Videos Tab */}
-          {activeTab === 'videos' && (
-            <div className="space-y-6">
-              <div className="flex items-center justify-between">
-                <h2 className="text-3xl font-bold text-blue-900">Hero Videos Management</h2>
-                <button
-                  onClick={() => setShowVideoForm(true)}
-                  className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2"
-                >
-                  <Plus className="w-4 h-4" />
-                  <span>Add Video</span>
-                </button>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {heroVideos.map((video) => (
-                  <div key={video.id} className="bg-white rounded-2xl shadow-sm border border-blue-100 overflow-hidden">
-                    <div className="aspect-video bg-gray-100">
+              <div className="p-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {heroVideos.map((video) => (
+                    <div key={video.id} className="border border-primary-200 rounded-xl overflow-hidden">
                       <img
                         src={video.thumbnail_url}
                         alt={video.title}
-                        className="w-full h-full object-cover"
+                        className="w-full h-48 object-cover"
                       />
-                    </div>
-                    <div className="p-4">
-                      <h3 className="font-semibold text-blue-900 mb-2">{video.title}</h3>
-                      <p className="text-sm text-blue-600 mb-2">{video.description}</p>
-                      <div className="flex items-center justify-between text-xs text-blue-500 mb-4">
-                        <span>by {video.maker_name}</span>
-                        <span>{video.location}</span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                          video.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'
-                        }`}>
-                          {video.is_active ? 'Active' : 'Inactive'}
-                        </span>
-                        <div className="flex items-center space-x-2">
-                          <button
-                            onClick={() => handleEditVideo(video)}
-                            className="text-blue-600 hover:text-blue-800 p-1"
-                          >
-                            <Edit className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={() => handleDeleteVideo(video.id)}
-                            className="text-red-600 hover:text-red-800 p-1"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              {/* Video Form Modal */}
-              {showVideoForm && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-                  <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-                    <div className="flex justify-between items-center p-6 border-b border-blue-200">
-                      <h3 className="text-xl font-bold text-blue-900">
-                        {editingVideo ? 'Edit Video' : 'Add New Video'}
-                      </h3>
-                      <button
-                        onClick={() => {
-                          setShowVideoForm(false);
-                          setEditingVideo(null);
-                          setVideoFile(null);
-                          setThumbnailFile(null);
-                        }}
-                        className="text-blue-600 hover:text-blue-800"
-                      >
-                        <XCircle className="w-6 h-6" />
-                      </button>
-                    </div>
-                    
-                    <form onSubmit={handleVideoSubmit} className="p-6 space-y-4">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-sm font-medium text-blue-900 mb-2">Title</label>
-                          <input
-                            type="text"
-                            value={videoForm.title}
-                            onChange={(e) => setVideoForm(v => ({ ...v, title: e.target.value }))}
-                            className="w-full border border-blue-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                            required
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-blue-900 mb-2">Maker Name</label>
-                          <input
-                            type="text"
-                            value={videoForm.maker_name}
-                            onChange={(e) => setVideoForm(v => ({ ...v, maker_name: e.target.value }))}
-                            className="w-full border border-blue-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                            required
-                          />
-                        </div>
-                      </div>
-                      
-                      <div>
-                        <label className="block text-sm font-medium text-blue-900 mb-2">Description</label>
-                        <textarea
-                          value={videoForm.description}
-                          onChange={(e) => setVideoForm(v => ({ ...v, description: e.target.value }))}
-                          className="w-full border border-blue-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                          rows={3}
-                          required
-                        />
-                      </div>
-                      
-                      <div>
-                        <label className="block text-sm font-medium text-blue-900 mb-2">Location</label>
-                        <input
-                          type="text"
-                          value={videoForm.location}
-                          onChange={(e) => setVideoForm(v => ({ ...v, location: e.target.value }))}
-                          className="w-full border border-blue-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                          required
-                        />
-                      </div>
-
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                          <FileUpload 
-                            type="video" 
-                            onFileSelect={setVideoFile} 
-                            currentFile={videoFile} 
-                            placeholder="Upload Video"
-                          />
-                          {videoUploading && <p className="text-blue-600 text-sm mt-2">Uploading video...</p>}
-                        </div>
-                        <div>
-                          <FileUpload 
-                            type="image" 
-                            onFileSelect={setThumbnailFile} 
-                            currentFile={thumbnailFile} 
-                            placeholder="Upload Thumbnail"
-                          />
-                          {thumbnailUploading && <p className="text-blue-600 text-sm mt-2">Uploading thumbnail...</p>}
-                        </div>
-                      </div>
-
-                      <div className="flex items-center space-x-4">
-                        <label className="flex items-center space-x-2">
-                          <input
-                            type="checkbox"
-                            checked={videoForm.is_active}
-                            onChange={(e) => setVideoForm(v => ({ ...v, is_active: e.target.checked }))}
-                            className="rounded border-blue-300 text-blue-600 focus:ring-blue-500"
-                          />
-                          <span className="text-sm text-blue-900">Active</span>
-                        </label>
-                        <div>
-                          <label className="block text-sm font-medium text-blue-900 mb-1">Order</label>
-                          <input
-                            type="number"
-                            value={videoForm.order_index}
-                            onChange={(e) => setVideoForm(v => ({ ...v, order_index: parseInt(e.target.value) }))}
-                            className="w-20 border border-blue-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                            min="1"
-                          />
-                        </div>
-                      </div>
-
-                      <div className="flex justify-end space-x-4 pt-4">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setShowVideoForm(false);
-                            setEditingVideo(null);
-                            setVideoFile(null);
-                            setThumbnailFile(null);
-                          }}
-                          className="px-4 py-2 text-blue-600 hover:text-blue-800 transition-colors"
-                        >
-                          Cancel
-                        </button>
-                        <button
-                          type="submit"
-                          disabled={videoUploading || thumbnailUploading}
-                          className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg transition-colors disabled:opacity-50"
-                        >
-                          {editingVideo ? 'Update Video' : 'Add Video'}
-                        </button>
-                      </div>
-                    </form>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Support Tab */}
-          {activeTab === 'support' && (
-            <div className="space-y-6">
-              <h2 className="text-3xl font-bold text-blue-900">Customer Support</h2>
-              
-              <div className="bg-white rounded-2xl shadow-sm border border-blue-100 overflow-hidden">
-                {isSupportLoading ? (
-                  <div className="p-8 text-center">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-                    <p className="text-blue-600 mt-2">Loading support tickets...</p>
-                  </div>
-                ) : selectedTicket ? (
-                  <div className="p-6">
-                    <div className="flex items-center justify-between mb-6">
-                      <button
-                        onClick={() => setSelectedTicket(null)}
-                        className="text-blue-600 hover:text-blue-800 flex items-center space-x-2"
-                      >
-                        <span>←</span>
-                        <span>Back to tickets</span>
-                      </button>
-                      <div className="flex items-center space-x-4">
-                        <select
-                          value={selectedTicket.status}
-                          onChange={(e) => handleUpdateTicketStatus(e.target.value)}
-                          className="border border-blue-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        >
-                          <option value="open">Open</option>
-                          <option value="in_progress">In Progress</option>
-                          <option value="resolved">Resolved</option>
-                          <option value="closed">Closed</option>
-                        </select>
-                      </div>
-                    </div>
-
-                    <div className="bg-blue-50 rounded-lg p-4 mb-6">
-                      <h3 className="font-semibold text-blue-900">{selectedTicket.subject}</h3>
-                      <p className="text-sm text-blue-600">
-                        {selectedTicket.user?.name} ({selectedTicket.user?.email})
-                      </p>
-                    </div>
-
-                    <div className="space-y-4 mb-6 max-h-96 overflow-y-auto">
-                      {ticketMessages.map((message) => (
-                        <div
-                          key={message.id}
-                          className={`flex ${message.is_staff ? 'justify-start' : 'justify-end'}`}
-                        >
-                          <div className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
-                            message.is_staff
-                              ? 'bg-blue-100 text-blue-900'
-                              : 'bg-blue-600 text-white'
+                      <div className="p-4">
+                        <div className="flex items-center justify-between mb-2">
+                          <h4 className="font-semibold text-primary-900">{video.title}</h4>
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                            video.is_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
                           }`}>
-                            <div className="flex items-center space-x-2 mb-1">
-                              <span className="text-xs font-medium">
-                                {message.is_staff ? 'Support' : message.user?.name || 'User'}
-                              </span>
-                            </div>
-                            <p className="text-sm">{message.message}</p>
-                            <p className="text-xs mt-1 opacity-75">
-                              {new Date(message.created_at).toLocaleString()}
-                            </p>
+                            {video.is_active ? 'Active' : 'Inactive'}
+                          </span>
+                        </div>
+                        <p className="text-sm text-primary-600 mb-2">{video.description}</p>
+                        <p className="text-xs text-primary-500">by {video.maker_name} • {video.location}</p>
+                        
+                        <div className="flex items-center justify-between mt-4">
+                          <span className="text-xs text-primary-500">Order: {video.order_index}</span>
+                          <div className="flex items-center space-x-2">
+                            <button
+                              onClick={() => {
+                                setSelectedHeroVideo(video);
+                                setHeroVideoForm(video);
+                                setShowHeroVideoModal(true);
+                              }}
+                              className="text-primary-600 hover:text-primary-800 p-1"
+                              title="Edit"
+                            >
+                              <Edit className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteHeroVideo(video.id)}
+                              className="text-red-600 hover:text-red-800 p-1"
+                              title="Delete"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
                           </div>
                         </div>
-                      ))}
-                    </div>
-
-                    <div className="flex space-x-2">
-                      <input
-                        type="text"
-                        value={newSupportMessage}
-                        onChange={(e) => setNewSupportMessage(e.target.value)}
-                        placeholder="Type your reply..."
-                        className="flex-1 border border-blue-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        disabled={isSupportLoading}
-                      />
-                      <button
-                        onClick={handleSendSupportMessage}
-                        disabled={!newSupportMessage.trim() || isSupportLoading}
-                        className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg disabled:opacity-50 transition-colors"
-                      >
-                        <Send className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="overflow-x-auto">
-                    <table className="min-w-full">
-                      <thead className="bg-blue-50">
-                        <tr>
-                          <th className="px-6 py-4 text-left text-sm font-semibold text-blue-900">Subject</th>
-                          <th className="px-6 py-4 text-left text-sm font-semibold text-blue-900">User</th>
-                          <th className="px-6 py-4 text-left text-sm font-semibold text-blue-900">Status</th>
-                          <th className="px-6 py-4 text-left text-sm font-semibold text-blue-900">Priority</th>
-                          <th className="px-6 py-4 text-left text-sm font-semibold text-blue-900">Updated</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-blue-100">
-                        {supportTickets.map((ticket) => (
-                          <tr
-                            key={ticket.id}
-                            onClick={() => handleSelectTicket(ticket)}
-                            className="hover:bg-blue-50 cursor-pointer transition-colors"
-                          >
-                            <td className="px-6 py-4 font-medium text-blue-900">{ticket.subject}</td>
-                            <td className="px-6 py-4 text-blue-600">{ticket.user?.name || 'Unknown'}</td>
-                            <td className="px-6 py-4">
-                              <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                ticket.status === 'open' ? 'bg-green-100 text-green-700' :
-                                ticket.status === 'in_progress' ? 'bg-yellow-100 text-yellow-700' :
-                                ticket.status === 'resolved' ? 'bg-blue-100 text-blue-700' :
-                                'bg-gray-100 text-gray-700'
-                              }`}>
-                                {ticket.status}
-                              </span>
-                            </td>
-                            <td className="px-6 py-4">
-                              <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                ticket.priority === 'urgent' ? 'bg-red-100 text-red-700' :
-                                ticket.priority === 'high' ? 'bg-orange-100 text-orange-700' :
-                                ticket.priority === 'medium' ? 'bg-yellow-100 text-yellow-700' :
-                                'bg-gray-100 text-gray-700'
-                              }`}>
-                                {ticket.priority}
-                              </span>
-                            </td>
-                            <td className="px-6 py-4 text-sm text-blue-600">
-                              {new Date(ticket.updated_at).toLocaleString()}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* Notifications Tab */}
-          {activeTab === 'notifications' && (
-            <div className="space-y-6">
-              <div className="flex items-center justify-between">
-                <h2 className="text-3xl font-bold text-blue-900">Send Notifications</h2>
-                <button
-                  onClick={() => setShowNotificationForm(true)}
-                  className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2"
-                >
-                  <Bell className="w-4 h-4" />
-                  <span>New Notification</span>
-                </button>
-              </div>
-
-              {showNotificationForm && (
-                <div className="bg-white rounded-2xl shadow-sm border border-blue-100 p-6">
-                  <form onSubmit={handleSendNotification} className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium text-blue-900 mb-2">Type</label>
-                        <select
-                          value={notificationForm.type}
-                          onChange={(e) => setNotificationForm(prev => ({ ...prev, type: e.target.value as any }))}
-                          className="w-full border border-blue-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        >
-                          <option value="system">System</option>
-                          <option value="promotion">Promotion</option>
-                          <option value="order">Order</option>
-                          <option value="delivery">Delivery</option>
-                        </select>
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-blue-900 mb-2">Target Users</label>
-                        <select
-                          value={notificationForm.targetUsers}
-                          onChange={(e) => setNotificationForm(prev => ({ ...prev, targetUsers: e.target.value as any }))}
-                          className="w-full border border-blue-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        >
-                          <option value="all">All Users</option>
-                          <option value="buyers">Buyers Only</option>
-                          <option value="sellers">Sellers Only</option>
-                        </select>
                       </div>
                     </div>
-                    
-                    <div>
-                      <label className="block text-sm font-medium text-blue-900 mb-2">Title</label>
-                      <input
-                        type="text"
-                        value={notificationForm.title}
-                        onChange={(e) => setNotificationForm(prev => ({ ...prev, title: e.target.value }))}
-                        className="w-full border border-blue-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        required
-                      />
-                    </div>
-                    
-                    <div>
-                      <label className="block text-sm font-medium text-blue-900 mb-2">Message</label>
-                      <textarea
-                        value={notificationForm.message}
-                        onChange={(e) => setNotificationForm(prev => ({ ...prev, message: e.target.value }))}
-                        className="w-full border border-blue-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        rows={4}
-                        required
-                      />
-                    </div>
-
-                    <div className="flex justify-end space-x-4">
-                      <button
-                        type="button"
-                        onClick={() => setShowNotificationForm(false)}
-                        className="px-4 py-2 text-blue-600 hover:text-blue-800 transition-colors"
-                      >
-                        Cancel
-                      </button>
-                      <button
-                        type="submit"
-                        className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg transition-colors"
-                      >
-                        Send Notification
-                      </button>
-                    </div>
-                  </form>
+                  ))}
                 </div>
-              )}
+              </div>
             </div>
           )}
 
-          {/* Settings Tab */}
           {activeTab === 'settings' && (
             <div className="space-y-6">
-              <h2 className="text-3xl font-bold text-blue-900">Platform Settings</h2>
-              
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                {/* Delivery Cities */}
-                <div className="bg-white rounded-2xl shadow-sm border border-blue-100 p-6">
-                  <h3 className="text-lg font-semibold text-blue-900 mb-4">Delivery Cities</h3>
-                  <div className="space-y-3">
-                    {deliveryCities.map((city) => (
-                      <div key={city.id} className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
-                        <span className="font-medium text-blue-900">{city.name}</span>
-                        <label className="flex items-center space-x-2">
-                          <input
-                            type="checkbox"
-                            checked={city.isActive}
-                            onChange={(e) => handleDeliveryCityToggle(city.id, e.target.checked)}
-                            className="rounded border-blue-300 text-blue-600 focus:ring-blue-500"
-                          />
-                          <span className="text-sm text-blue-600">Active</span>
-                        </label>
-                      </div>
-                    ))}
-                  </div>
+              {/* Delivery Cities */}
+              <div className="bg-white rounded-2xl p-6 shadow-soft border border-primary-100">
+                <h3 className="text-lg font-semibold text-primary-900 mb-4">Delivery Cities</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {deliveryCities.map((city) => (
+                    <div key={city.id} className="flex items-center justify-between p-3 border border-primary-200 rounded-lg">
+                      <span className="font-medium text-primary-900">{city.name}</span>
+                      <label className="flex items-center cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={city.isActive}
+                          onChange={(e) => updateDeliveryCity(city.id, e.target.checked)}
+                          className="rounded border-primary-300 text-primary-600 focus:ring-primary-500"
+                        />
+                        <span className="ml-2 text-sm text-primary-600">Active</span>
+                      </label>
+                    </div>
+                  ))}
                 </div>
+              </div>
 
-                {/* Theme Settings */}
-                <div className="bg-white rounded-2xl shadow-sm border border-blue-100 p-6">
-                  <h3 className="text-lg font-semibold text-blue-900 mb-4">Theme Settings</h3>
-                  <div className="space-y-3">
-                    {['default', 'christmas', 'diwali'].map((theme) => (
-                      <div key={theme} className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
-                        <span className="font-medium text-blue-900 capitalize">{theme}</span>
-                        <button
-                          onClick={() => handleThemeChange(theme)}
-                          className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${
-                            currentTheme.name === theme
-                              ? 'bg-blue-600 text-white'
-                              : 'bg-blue-100 text-blue-600 hover:bg-blue-200'
-                          }`}
-                        >
-                          {currentTheme.name === theme ? 'Active' : 'Activate'}
-                        </button>
-                      </div>
-                    ))}
+              {/* Theme Settings */}
+              <div className="bg-white rounded-2xl p-6 shadow-soft border border-primary-100">
+                <h3 className="text-lg font-semibold text-primary-900 mb-4">Theme Settings</h3>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between p-4 border border-primary-200 rounded-lg">
+                    <div>
+                      <h4 className="font-medium text-primary-900">Current Theme</h4>
+                      <p className="text-sm text-primary-600">{currentTheme.name}</p>
+                    </div>
+                    <div className="flex space-x-2">
+                      <div className="w-6 h-6 rounded-full" style={{ backgroundColor: '#b8926b' }}></div>
+                      <div className="w-6 h-6 rounded-full" style={{ backgroundColor: '#d49855' }}></div>
+                      <div className="w-6 h-6 rounded-full" style={{ backgroundColor: '#a8875f' }}></div>
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
           )}
         </div>
-      </main>
+
+        {/* Hero Video Modal */}
+        {showHeroVideoModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+              <div className="flex justify-between items-center p-6 border-b border-primary-200">
+                <h2 className="text-xl font-bold text-primary-900">
+                  {selectedHeroVideo ? 'Edit Hero Video' : 'Add Hero Video'}
+                </h2>
+                <button
+                  onClick={() => setShowHeroVideoModal(false)}
+                  className="text-primary-600 hover:text-primary-800 p-2"
+                >
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+              
+              <form onSubmit={handleHeroVideoSubmit} className="p-6 space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-primary-700 mb-1">Title</label>
+                    <input
+                      type="text"
+                      required
+                      value={heroVideoForm.title}
+                      onChange={(e) => setHeroVideoForm(prev => ({ ...prev, title: e.target.value }))}
+                      className="w-full border border-primary-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-primary-700 mb-1">Maker Name</label>
+                    <input
+                      type="text"
+                      required
+                      value={heroVideoForm.maker_name}
+                      onChange={(e) => setHeroVideoForm(prev => ({ ...prev, maker_name: e.target.value }))}
+                      className="w-full border border-primary-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-primary-700 mb-1">Description</label>
+                  <textarea
+                    required
+                    value={heroVideoForm.description}
+                    onChange={(e) => setHeroVideoForm(prev => ({ ...prev, description: e.target.value }))}
+                    className="w-full border border-primary-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                    rows={3}
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-primary-700 mb-1">Video URL</label>
+                    <input
+                      type="url"
+                      required
+                      value={heroVideoForm.video_url}
+                      onChange={(e) => setHeroVideoForm(prev => ({ ...prev, video_url: e.target.value }))}
+                      className="w-full border border-primary-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-primary-700 mb-1">Thumbnail URL</label>
+                    <input
+                      type="url"
+                      required
+                      value={heroVideoForm.thumbnail_url}
+                      onChange={(e) => setHeroVideoForm(prev => ({ ...prev, thumbnail_url: e.target.value }))}
+                      className="w-full border border-primary-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-primary-700 mb-1">Location</label>
+                    <input
+                      type="text"
+                      required
+                      value={heroVideoForm.location}
+                      onChange={(e) => setHeroVideoForm(prev => ({ ...prev, location: e.target.value }))}
+                      className="w-full border border-primary-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-primary-700 mb-1">Order Index</label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={heroVideoForm.order_index}
+                      onChange={(e) => setHeroVideoForm(prev => ({ ...prev, order_index: parseInt(e.target.value) }))}
+                      className="w-full border border-primary-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                    />
+                  </div>
+                  <div className="flex items-center">
+                    <label className="flex items-center cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={heroVideoForm.is_active}
+                        onChange={(e) => setHeroVideoForm(prev => ({ ...prev, is_active: e.target.checked }))}
+                        className="rounded border-primary-300 text-primary-600 focus:ring-primary-500"
+                      />
+                      <span className="ml-2 text-sm font-medium text-primary-700">Active</span>
+                    </label>
+                  </div>
+                </div>
+
+                <div className="flex justify-end space-x-3 pt-4">
+                  <button
+                    type="button"
+                    onClick={() => setShowHeroVideoModal(false)}
+                    className="px-4 py-2 text-primary-600 hover:text-primary-800 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="bg-primary-600 hover:bg-primary-700 text-white px-6 py-2 rounded-lg transition-colors"
+                  >
+                    {selectedHeroVideo ? 'Update' : 'Create'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 };

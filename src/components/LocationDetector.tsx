@@ -88,13 +88,13 @@ export const LocationDetector: React.FC = () => {
         <motion.div
           initial={{ opacity: 0, scale: 0.8 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="bg-white rounded-xl shadow-lg border border-gray-200 p-3 flex items-center space-x-2"
+          className="bg-white rounded-xl shadow-lg border border-primary-200 p-3 flex items-center space-x-2"
         >
-          <MapPin className="w-4 h-4 text-rose-600" />
-          <span className="text-sm font-medium text-gray-700">{userCity}</span>
+          <MapPin className="w-4 h-4 text-primary-600" />
+          <span className="text-sm font-medium text-primary-700">{userCity}</span>
           <button
             onClick={() => setShowLocationModal(true)}
-            className="text-xs text-rose-600 hover:text-rose-700 font-medium"
+            className="text-xs text-primary-600 hover:text-primary-700 font-medium"
           >
             Change
           </button>
@@ -114,13 +114,13 @@ export const LocationDetector: React.FC = () => {
             className="bg-cream-50 rounded-3xl p-12 w-full max-w-lg border border-blush-100 shadow-2xl"
           >
             <div className="text-center mb-8">
-              <div className="bg-blush-600 w-20 h-20 rounded-3xl flex items-center justify-center mx-auto mb-6">
+              <div className="bg-primary-600 w-20 h-20 rounded-3xl flex items-center justify-center mx-auto mb-6">
                 <MapPin className="w-12 h-12 text-white" />
               </div>
-              <h2 className="text-3xl font-bold text-charcoal-900 mb-3">
+              <h2 className="text-3xl font-bold text-primary-900 mb-3">
                 What's your location?
               </h2>
-              <p className="text-lg text-charcoal-600">
+              <p className="text-lg text-primary-600">
                 We'll show you instant delivery options in your area
               </p>
             </div>
@@ -137,7 +137,7 @@ export const LocationDetector: React.FC = () => {
               whileTap={{ scale: 0.98 }}
               onClick={handleAutoDetect}
               disabled={isLocationLoading}
-              className="w-full bg-blush-600 hover:bg-blush-700 text-white py-4 px-6 rounded-2xl text-lg font-bold hover:shadow-lg transition-all disabled:opacity-50 mb-6 flex items-center justify-center space-x-3"
+              className="w-full bg-primary-600 hover:bg-primary-700 text-white py-4 px-6 rounded-2xl text-lg font-bold hover:shadow-lg transition-all disabled:opacity-50 mb-6 flex items-center justify-center space-x-3"
             >
               {isLocationLoading ? (
                 <>
@@ -154,23 +154,23 @@ export const LocationDetector: React.FC = () => {
 
             <div className="relative mb-6">
               <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-blush-200" />
+                <div className="w-full border-t border-primary-200" />
               </div>
               <div className="relative flex justify-center text-lg">
-                <span className="px-3 bg-cream-50 text-blush-500">or choose manually</span>
+                <span className="px-3 bg-cream-50 text-primary-500">or choose manually</span>
               </div>
             </div>
 
             {/* Manual selection */}
             <div className="space-y-4 mb-8">
-              <label className="block text-lg font-semibold text-charcoal-800 mb-2">
+              <label className="block text-lg font-semibold text-primary-800 mb-2">
                 Select your city
               </label>
               {cities.length > 0 ? (
                 <select
                   value={selectedCity}
                   onChange={(e) => setSelectedCity(e.target.value)}
-                  className="w-full border border-blush-200 rounded-2xl px-5 py-4 text-lg focus:ring-2 focus:ring-blush-500 focus:border-transparent"
+                  className="w-full border border-primary-200 rounded-2xl px-5 py-4 text-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                 >
                   <option value="">Choose a city</option>
                   {cities.map(city => (
@@ -178,7 +178,7 @@ export const LocationDetector: React.FC = () => {
                   ))}
                 </select>
               ) : (
-                <div className="text-charcoal-500 text-base">No cities available.</div>
+                <div className="text-primary-500 text-base">No cities available.</div>
               )}
             </div>
 
@@ -186,7 +186,7 @@ export const LocationDetector: React.FC = () => {
               {userCity && (
                 <button
                   onClick={() => setShowLocationModal(false)}
-                  className="flex-1 bg-cream-100 text-charcoal-700 py-4 px-6 rounded-2xl text-lg font-semibold hover:bg-cream-200 transition-colors"
+                  className="flex-1 bg-primary-100 text-primary-700 py-4 px-6 rounded-2xl text-lg font-semibold hover:bg-primary-200 transition-colors"
                 >
                   Cancel
                 </button>
@@ -194,7 +194,7 @@ export const LocationDetector: React.FC = () => {
               <button
                 onClick={handleManualSelection}
                 disabled={!selectedCity}
-                className="flex-1 bg-blush-600 hover:bg-blush-700 text-white py-4 px-6 rounded-2xl text-lg font-bold hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex-1 bg-primary-600 hover:bg-primary-700 text-white py-4 px-6 rounded-2xl text-lg font-bold hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Confirm
               </button>

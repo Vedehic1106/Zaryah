@@ -254,7 +254,7 @@ export const SupportChat: React.FC = () => {
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
         onClick={() => setIsOpen(true)}
-        className="fixed bottom-6 right-6 mb-24 bg-blush-600 hover:bg-blush-700 text-white p-4 rounded-full shadow-lg z-40 transition-all"
+        className="fixed bottom-6 right-6 mb-24 bg-primary-600 hover:bg-primary-700 text-white p-4 rounded-full shadow-lg z-40 transition-all"
       >
         <MessageSquare className="w-6 h-6" />
       </motion.button>
@@ -281,19 +281,19 @@ export const SupportChat: React.FC = () => {
               className="fixed right-0 top-0 h-full w-full max-w-md bg-cream-50 shadow-2xl z-50 flex flex-col"
             >
               {/* Header */}
-              <div className="flex items-center justify-between p-6 border-b border-blush-100 bg-blush-50">
+              <div className="flex items-center justify-between p-6 border-b border-primary-100 bg-primary-50">
                 <div className="flex items-center space-x-3">
-                  <div className="bg-blush-600 p-2 rounded-lg">
+                  <div className="bg-primary-600 p-2 rounded-lg">
                     <Headphones className="w-5 h-5 text-white" />
                   </div>
                   <div>
-                    <h2 className="text-lg font-bold text-blush-900">Support</h2>
-                    <p className="text-sm text-blush-700">We're here to help</p>
+                    <h2 className="text-lg font-bold text-primary-900">Support</h2>
+                    <p className="text-sm text-primary-700">We're here to help</p>
                   </div>
                 </div>
                 <button
                   onClick={() => setIsOpen(false)}
-                  className="text-blush-600 hover:text-blush-800 p-2 hover:bg-blush-100 rounded-lg transition-colors"
+                  className="text-primary-600 hover:text-primary-800 p-2 hover:bg-primary-100 rounded-lg transition-colors"
                 >
                   <X className="w-5 h-5" />
                 </button>
@@ -305,9 +305,9 @@ export const SupportChat: React.FC = () => {
                   {/* New Ticket Form */}
                   {showNewTicketForm ? (
                     <div className="space-y-4">
-                      <h3 className="text-lg font-semibold text-blush-900">Create New Ticket</h3>
+                      <h3 className="text-lg font-semibold text-primary-900">Create New Ticket</h3>
                       <div>
-                        <label className="block text-sm font-medium text-blush-800 mb-2">
+                        <label className="block text-sm font-medium text-primary-800 mb-2">
                           What can we help you with?
                         </label>
                         <input
@@ -315,20 +315,20 @@ export const SupportChat: React.FC = () => {
                           value={newTicketSubject}
                           onChange={(e) => setNewTicketSubject(e.target.value)}
                           placeholder="Describe your issue..."
-                          className="w-full border border-blush-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blush-500 focus:border-transparent"
+                          className="w-full border border-primary-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                         />
                       </div>
                       <div className="flex space-x-3">
                         <button
                           onClick={() => setShowNewTicketForm(false)}
-                          className="flex-1 bg-cream-100 text-cream-700 py-2 px-4 rounded-lg hover:bg-cream-200 transition-colors"
+                          className="flex-1 bg-primary-100 text-primary-700 py-2 px-4 rounded-lg hover:bg-primary-200 transition-colors"
                         >
                           Cancel
                         </button>
                         <button
                           onClick={createTicket}
                           disabled={!newTicketSubject.trim() || isLoading}
-                          className="flex-1 bg-blush-600 hover:bg-blush-700 text-white py-2 px-4 rounded-lg transition-colors disabled:opacity-50"
+                          className="flex-1 bg-primary-600 hover:bg-primary-700 text-white py-2 px-4 rounded-lg transition-colors disabled:opacity-50"
                         >
                           {isLoading ? 'Creating...' : 'Create Ticket'}
                         </button>
@@ -339,16 +339,16 @@ export const SupportChat: React.FC = () => {
                       {/* Existing Tickets */}
                       {tickets.length > 0 && (
                         <div>
-                          <h3 className="text-lg font-semibold text-blush-900 mb-3">Your Tickets</h3>
+                          <h3 className="text-lg font-semibold text-primary-900 mb-3">Your Tickets</h3>
                           <div className="space-y-3">
                             {tickets.map((ticket) => (
                               <div
                                 key={ticket.id}
                                 onClick={() => setActiveTicket(ticket)}
-                                className="p-4 border border-blush-200 rounded-lg hover:bg-blush-50 cursor-pointer transition-colors"
+                                className="p-4 border border-primary-200 rounded-lg hover:bg-primary-50 cursor-pointer transition-colors"
                               >
                                 <div className="flex items-center justify-between mb-2">
-                                  <h4 className="font-medium text-blush-900 text-sm">
+                                  <h4 className="font-medium text-primary-900 text-sm">
                                     {ticket.subject}
                                   </h4>
                                   <div className="flex space-x-2">
@@ -360,7 +360,7 @@ export const SupportChat: React.FC = () => {
                                     </span>
                                   </div>
                                 </div>
-                                <p className="text-xs text-blush-600">
+                                <p className="text-xs text-primary-600">
                                   {formatDistanceToNow(new Date(ticket.updated_at), { addSuffix: true })}
                                 </p>
                               </div>
@@ -372,16 +372,16 @@ export const SupportChat: React.FC = () => {
                       {/* New Ticket Button */}
                       <button
                         onClick={() => setShowNewTicketForm(true)}
-                        className="w-full bg-blush-600 hover:bg-blush-700 text-white py-3 px-4 rounded-lg transition-colors flex items-center justify-center space-x-2"
+                        className="w-full bg-primary-600 hover:bg-primary-700 text-white py-3 px-4 rounded-lg transition-colors flex items-center justify-center space-x-2"
                       >
                         <Plus className="w-4 h-4" />
                         <span>New Support Ticket</span>
                       </button>
 
                       {/* Quick Help */}
-                      <div className="bg-blush-50 border border-blush-200 rounded-lg p-4">
-                        <h4 className="font-medium text-blush-900 mb-2">Quick Help</h4>
-                        <div className="space-y-2 text-sm text-blush-700">
+                      <div className="bg-primary-50 border border-primary-200 rounded-lg p-4">
+                        <h4 className="font-medium text-primary-900 mb-2">Quick Help</h4>
+                        <div className="space-y-2 text-sm text-primary-700">
                           <p>• Order issues: Check your order status first</p>
                           <p>• Delivery questions: Track your package</p>
                           <p>• Payment problems: Contact us immediately</p>
@@ -394,11 +394,11 @@ export const SupportChat: React.FC = () => {
               ) : (
                 <>
                   {/* Active Ticket Header */}
-                  <div className="p-4 border-b border-blush-200 bg-blush-50">
+                  <div className="p-4 border-b border-primary-200 bg-primary-50">
                     <div className="flex items-center justify-between">
                       <button
                         onClick={() => setActiveTicket(null)}
-                        className="text-blush-600 hover:text-blush-800 text-sm font-medium"
+                        className="text-primary-600 hover:text-primary-800 text-sm font-medium"
                       >
                         ← Back to tickets
                       </button>
@@ -411,7 +411,7 @@ export const SupportChat: React.FC = () => {
                         </span>
                       </div>
                     </div>
-                    <h3 className="font-semibold text-blush-900 mt-2">{activeTicket.subject}</h3>
+                    <h3 className="font-semibold text-primary-900 mt-2">{activeTicket.subject}</h3>
                   </div>
 
                   {/* Messages */}
@@ -423,8 +423,8 @@ export const SupportChat: React.FC = () => {
                       >
                         <div className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
                           message.is_staff
-                            ? 'bg-cream-100 text-cream-900'
-                            : 'bg-blush-600 text-white'
+                            ? 'bg-primary-100 text-primary-900'
+                            : 'bg-primary-600 text-white'
                         }`}>
                           <div className="flex items-center space-x-2 mb-1">
                             {message.is_staff ? (
@@ -438,7 +438,7 @@ export const SupportChat: React.FC = () => {
                           </div>
                           <p className="text-sm">{message.message}</p>
                           <p className={`text-xs mt-1 ${
-                            message.is_staff ? 'text-cream-500' : 'text-blush-200'
+                            message.is_staff ? 'text-primary-500' : 'text-primary-200'
                           }`}>
                             {formatDistanceToNow(new Date(message.created_at), { addSuffix: true })}
                           </p>
@@ -449,7 +449,7 @@ export const SupportChat: React.FC = () => {
                   </div>
 
                   {/* Message Input */}
-                  <div className="p-4 border-t border-blush-200">
+                  <div className="p-4 border-t border-primary-200">
                     <div className="flex space-x-2">
                       <input
                         type="text"
@@ -457,13 +457,13 @@ export const SupportChat: React.FC = () => {
                         onChange={(e) => setNewMessage(e.target.value)}
                         onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
                         placeholder="Type your message..."
-                        className="flex-1 border border-blush-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blush-500 focus:border-transparent"
+                        className="flex-1 border border-primary-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                         disabled={isLoading}
                       />
                       <button
                         onClick={sendMessage}
                         disabled={!newMessage.trim() || isLoading}
-                        className="bg-blush-600 hover:bg-blush-700 text-white p-2 rounded-lg transition-colors disabled:opacity-50"
+                        className="bg-primary-600 hover:bg-primary-700 text-white p-2 rounded-lg transition-colors disabled:opacity-50"
                       >
                         <Send className="w-4 h-4" />
                       </button>

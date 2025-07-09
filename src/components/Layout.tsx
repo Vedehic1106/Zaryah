@@ -43,12 +43,10 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
 
   const getSellerNavigation = () => [
     { name: 'Dashboard', href: '/seller/dashboard', icon: User },
-    { name: 'Orders', href: '/orders', icon: History },
   ];
 
   const getAdminNavigation = () => [
     { name: 'Dashboard', href: '/admin/dashboard', icon: User },
-    { name: 'Orders', href: '/orders', icon: History },
   ];
 
   const getNavigation = () => {

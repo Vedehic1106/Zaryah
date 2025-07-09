@@ -67,19 +67,19 @@ export const CartSidebar: React.FC = () => {
               className="fixed right-0 top-0 h-full w-full max-w-md bg-white shadow-2xl z-50 flex flex-col"
             >
               {/* Header */}
-              <div className="flex items-center justify-between p-6 border-b border-amber-200 bg-amber-50">
+              <div className="flex items-center justify-between p-6 border-b border-primary-200 bg-primary-50">
                 <div className="flex items-center space-x-3">
-                  <div className="bg-amber-600 p-2 rounded-lg">
+                  <div className="bg-primary-600 p-2 rounded-lg">
                     <ShoppingBag className="w-5 h-5 text-white" />
                   </div>
                   <div>
-                    <h2 className="text-lg font-bold text-amber-900">Your Cart</h2>
-                    <p className="text-sm text-amber-700">{getTotalItems()} items</p>
+                    <h2 className="text-lg font-bold text-primary-900">Your Cart</h2>
+                    <p className="text-sm text-primary-700">{getTotalItems()} items</p>
                   </div>
                 </div>
                 <button
                   onClick={() => setIsCartOpen(false)}
-                  className="text-amber-600 hover:text-amber-800 p-2 hover:bg-amber-100 rounded-lg transition-colors"
+                  className="text-primary-600 hover:text-primary-800 p-2 hover:bg-primary-100 rounded-lg transition-colors"
                 >
                   <X className="w-5 h-5" />
                 </button>
@@ -89,16 +89,16 @@ export const CartSidebar: React.FC = () => {
               <div className="flex-1 overflow-y-auto p-4">
                 {items.length === 0 ? (
                   <div className="text-center py-16">
-                    <div className="bg-amber-100 w-20 h-20 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                      <ShoppingBag className="w-8 h-8 text-amber-600" />
+                    <div className="bg-primary-100 w-20 h-20 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                      <ShoppingBag className="w-8 h-8 text-primary-600" />
                     </div>
-                    <h3 className="text-lg font-semibold text-amber-900 mb-2">Your cart is empty</h3>
-                    <p className="text-amber-700 text-sm">Add some beautiful handmade items to get started</p>
+                    <h3 className="text-lg font-semibold text-primary-900 mb-2">Your cart is empty</h3>
+                    <p className="text-primary-700 text-sm">Add some beautiful handmade items to get started</p>
                   </div>
                 ) : (
                   <div className="space-y-6">
                     {items.map((item) => (
-                      <div key={item.id} className="bg-amber-50 rounded-xl p-4 border border-amber-200">
+                      <div key={item.id} className="bg-primary-50 rounded-xl p-4 border border-primary-200">
                         {/* Product Info */}
                         <div className="flex items-start space-x-3 mb-4">
                           <img
@@ -110,9 +110,9 @@ export const CartSidebar: React.FC = () => {
                             <h4 className="font-semibold text-amber-900 text-sm line-clamp-2">
                               {item.product.name}
                             </h4>
-                            <p className="text-xs text-amber-600 mb-2">by {item.product.sellerName}</p>
+                            <p className="text-xs text-primary-600 mb-2">by {item.product.sellerName}</p>
                             <div className="flex items-center justify-between">
-                              <span className="font-bold text-amber-800">
+                              <span className="font-bold text-primary-800">
                                 ₹{item.product.price.toLocaleString()}
                               </span>
                               <button
@@ -130,37 +130,37 @@ export const CartSidebar: React.FC = () => {
                           <div className="flex items-center space-x-3">
                             <button
                               onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                              className="w-8 h-8 bg-amber-200 rounded-full flex items-center justify-center hover:bg-amber-300 transition-colors"
+                              className="w-8 h-8 bg-primary-200 rounded-full flex items-center justify-center hover:bg-primary-300 transition-colors"
                             >
                               <Minus className="w-4 h-4" />
                             </button>
-                            <span className="font-semibold text-amber-900 w-8 text-center">
+                            <span className="font-semibold text-primary-900 w-8 text-center">
                               {item.quantity}
                             </span>
                             <button
                               onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                              className="w-8 h-8 bg-amber-200 rounded-full flex items-center justify-center hover:bg-amber-300 transition-colors"
+                              className="w-8 h-8 bg-primary-200 rounded-full flex items-center justify-center hover:bg-primary-300 transition-colors"
                             >
                               <Plus className="w-4 h-4" />
                             </button>
                           </div>
-                          <span className="font-bold text-amber-800">
+                          <span className="font-bold text-primary-800">
                             ₹{(item.product.price * item.quantity).toLocaleString()}
                           </span>
                         </div>
 
                         {/* Gift Packaging Option */}
-                        <div className="space-y-3 border-t border-amber-200 pt-3">
+                        <div className="space-y-3 border-t border-primary-200 pt-3">
                           <label className="flex items-center space-x-3 cursor-pointer">
                             <input
                               type="checkbox"
                               checked={item.giftPackaging}
                               onChange={(e) => handleGiftPackagingToggle(item.id, e.target.checked)}
-                              className="rounded border-amber-300 text-amber-600 focus:ring-amber-500"
+                              className="rounded border-primary-300 text-primary-600 focus:ring-primary-500"
                             />
                             <div className="flex items-center space-x-2">
-                              <Package className="w-4 h-4 text-amber-600" />
-                              <span className="text-sm font-medium text-amber-900">
+                              <Package className="w-4 h-4 text-primary-600" />
+                              <span className="text-sm font-medium text-primary-900">
                                 Gift packaging (+₹30)
                               </span>
                             </div>
@@ -169,14 +169,14 @@ export const CartSidebar: React.FC = () => {
                           {item.giftPackaging && (
                             <div className="ml-7">
                               <div className="flex items-center space-x-2 mb-2">
-                                <MessageSquare className="w-4 h-4 text-amber-600" />
-                                <span className="text-sm font-medium text-amber-900">Gift note</span>
+                                <MessageSquare className="w-4 h-4 text-primary-600" />
+                                <span className="text-sm font-medium text-primary-900">Gift note</span>
                               </div>
                               <textarea
                                 value={item.giftNote || ''}
                                 onChange={(e) => handleGiftNoteChange(item.id, e.target.value)}
                                 placeholder="Write a personal message..."
-                                className="w-full text-xs border border-amber-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-amber-500 focus:border-transparent resize-none"
+                                className="w-full text-xs border border-primary-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary-500 focus:border-transparent resize-none"
                                 rows={2}
                               />
                             </div>
@@ -190,39 +190,39 @@ export const CartSidebar: React.FC = () => {
 
               {/* Footer */}
               {items.length > 0 && (
-                <div className="border-t border-amber-200 p-6 bg-white">
+                <div className="border-t border-primary-200 p-6 bg-white">
                   {/* Price Breakdown */}
                   <div className="space-y-2 mb-4">
                     <div className="flex justify-between text-sm">
-                      <span className="text-amber-700">Subtotal</span>
-                      <span className="text-amber-900">₹{subtotal.toLocaleString()}</span>
+                      <span className="text-primary-700">Subtotal</span>
+                      <span className="text-primary-900">₹{subtotal.toLocaleString()}</span>
                     </div>
                     
                     {giftPackagingCost > 0 && (
                       <div className="flex justify-between text-sm">
-                        <span className="text-amber-700">Gift packaging</span>
-                        <span className="text-amber-900">₹{giftPackagingCost}</span>
+                        <span className="text-primary-700">Gift packaging</span>
+                        <span className="text-primary-900">₹{giftPackagingCost}</span>
                       </div>
                     )}
                     
                     <div className="flex justify-between text-sm">
-                      <span className="text-amber-700">Standard delivery</span>
-                      <span className="text-amber-900">
+                      <span className="text-primary-700">Standard delivery</span>
+                      <span className="text-primary-900">
                         {standardDeliveryCost === 0 ? 'FREE' : `₹${standardDeliveryCost}`}
                       </span>
                     </div>
                     
                     <div className="flex justify-between text-sm">
-                      <span className="text-amber-700 flex items-center">
+                      <span className="text-primary-700 flex items-center">
                         <Truck className="w-3 h-3 mr-1" />
                         Instant delivery (Dunzo)
                       </span>
-                      <span className="text-amber-900">₹{instantDeliveryCost}</span>
+                      <span className="text-primary-900">₹{instantDeliveryCost}</span>
                     </div>
                     
-                    <div className="border-t border-amber-200 pt-2 flex justify-between font-bold">
-                      <span className="text-amber-900">Total (Standard)</span>
-                      <span className="text-amber-600">
+                    <div className="border-t border-primary-200 pt-2 flex justify-between font-bold">
+                      <span className="text-primary-900">Total (Standard)</span>
+                      <span className="text-primary-600">
                         ₹{(subtotal + giftPackagingCost + standardDeliveryCost).toLocaleString()}
                       </span>
                     </div>
@@ -230,7 +230,7 @@ export const CartSidebar: React.FC = () => {
                   
                   <button
                     onClick={() => setShowCheckout(true)}
-                    className="w-full bg-amber-600 hover:bg-amber-700 text-white py-3 rounded-xl font-semibold transition-all flex items-center justify-center space-x-2 shadow-lg"
+                    className="w-full bg-primary-600 hover:bg-primary-700 text-white py-3 rounded-xl font-semibold transition-all flex items-center justify-center space-x-2 shadow-lg"
                   >
                     <CreditCard className="w-5 h-5" />
                     <span>Proceed to Checkout</span>
