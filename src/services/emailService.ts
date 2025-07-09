@@ -67,9 +67,9 @@ class EmailService {
     const subject = `Order Confirmation - ${orderData.id}`;
     const html = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <div style="background: linear-gradient(135deg, #b8926b, #a67c5a); padding: 30px; text-align: center;">
+        <div style="background: linear-gradient(135deg, #f59e0b, #d97706); padding: 30px; text-align: center;">
           <h1 style="color: white; margin: 0;">Order Confirmed!</h1>
-          <p style="color: #f4f0e8; margin: 10px 0 0 0;">Thank you for your order with Zaryah</p>
+          <p style="color: #fef3c7; margin: 10px 0 0 0;">Thank you for your order with GiftFlare</p>
         </div>
         
         <div style="padding: 30px; background: white;">
@@ -106,7 +106,7 @@ class EmailService {
     const text = `
       Order Confirmed!
       
-      Thank you for your order with Zaryah.
+      Thank you for your order with GiftFlare.
       
       Order ID: ${orderData.id}
       Total Amount: ₹${(orderData.total_amount / 100).toLocaleString()}
@@ -131,9 +131,9 @@ class EmailService {
     const subject = `Your Order is on the Way! - ${orderData.id}`;
     const html = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <div style="background: linear-gradient(135deg, #b8926b, #a67c5a); padding: 30px; text-align: center;">
+        <div style="background: linear-gradient(135deg, #10b981, #059669); padding: 30px; text-align: center;">
           <h1 style="color: white; margin: 0;">📦 Order Shipped!</h1>
-          <p style="color: #f4f0e8; margin: 10px 0 0 0;">Your handmade treasures are on their way</p>
+          <p style="color: #d1fae5; margin: 10px 0 0 0;">Your handmade treasures are on their way</p>
         </div>
         
         <div style="padding: 30px; background: white;">
@@ -172,13 +172,13 @@ class EmailService {
     const subject = `Order Delivered Successfully! - ${orderData.id}`;
     const html = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <div style="background: linear-gradient(135deg, #b8926b, #a67c5a); padding: 30px; text-align: center;">
+        <div style="background: linear-gradient(135deg, #8b5cf6, #7c3aed); padding: 30px; text-align: center;">
           <h1 style="color: white; margin: 0;">🎉 Delivered!</h1>
-          <p style="color: #f4f0e8; margin: 10px 0 0 0;">Your order has been delivered successfully</p>
+          <p style="color: #e9d5ff; margin: 10px 0 0 0;">Your order has been delivered successfully</p>
         </div>
         
         <div style="padding: 30px; background: white;">
-          <h2 style="color: #8a654b;">Thank You for Choosing Zaryah!</h2>
+          <h2 style="color: #581c87;">Thank You for Choosing GiftFlare!</h2>
           <p>Your order <strong>${orderData.id}</strong> has been delivered successfully.</p>
           
           <div style="background: #faf5ff; padding: 20px; margin: 20px 0; border-radius: 8px;">
@@ -198,7 +198,7 @@ class EmailService {
       
       Your order ${orderData.id} has been delivered successfully.
       
-      Thank you for choosing Zaryah! We hope you love your handmade treasures.
+      Thank you for choosing GiftFlare! We hope you love your handmade treasures.
       
       Please rate your experience and share your feedback.
     `;
