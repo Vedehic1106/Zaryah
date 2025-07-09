@@ -74,11 +74,12 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
           {/* Logo - Left Side */}
           <div className="flex-shrink-0 flex items-center justify-start">
             <Link to="/" className="flex items-center space-x-3">
-              <img 
-                src="/src/assets/WhatsApp Image 2025-07-09 at 12.39.30_ad8335fd.jpg" 
-                alt="Zaryah Logo" 
-                className="h-12 xl:h-16 w-auto object-contain"
-              />
+              <span className="p-2 rounded-lg flex items-center justify-center transition-colors duration-200 bg-primary-100">
+                <Sparkles className="w-7 h-7 xl:w-9 xl:h-9 transition-colors duration-200 text-primary-600" />
+              </span>
+              <span className="text-2xl xl:text-4xl font-bold font-serif transition-colors duration-200 text-primary-700">
+                Zaryah
+              </span>
             </Link>
           </div>
           {/* Center Navigation */}
@@ -139,11 +140,12 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
         {/* Tablet header */}
         <div className="hidden md:flex lg:hidden w-full items-center justify-between py-4 px-4">
           <Link to="/" className="flex items-center space-x-2">
-            <img 
-              src="/src/assets/WhatsApp Image 2025-07-09 at 12.39.30_ad8335fd.jpg" 
-              alt="Zaryah Logo" 
-              className="h-10 w-auto object-contain"
-            />
+            <span className="p-2 rounded-lg flex items-center justify-center transition-colors duration-200 bg-primary-100">
+              <Sparkles className="w-6 h-6 transition-colors duration-200 text-primary-600" />
+            </span>
+            <span className="text-xl font-bold font-serif transition-colors duration-200 text-primary-700">
+              Zaryah
+            </span>
           </Link>
           <div className="flex items-center space-x-3">
             {user && <NotificationCenter />}
@@ -161,11 +163,12 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
         {/* Mobile header: logo/icons row */}
         <div className="md:hidden w-full px-4 pt-3 pb-2 flex items-center justify-between">
           <Link to="/" className="flex items-center space-x-3">
-            <img 
-              src="/src/assets/WhatsApp Image 2025-07-09 at 12.39.30_ad8335fd.jpg" 
-              alt="Zaryah Logo" 
-              className="h-8 w-auto object-contain"
-            />
+            <span className="p-2 rounded-lg flex items-center justify-center transition-colors duration-200 bg-primary-100">
+              <Sparkles className="w-6 h-6 transition-colors duration-200 text-primary-600" />
+            </span>
+            <span className="text-lg font-bold font-serif transition-colors duration-200 text-primary-700">
+              Zaryah
+            </span>
           </Link>
           <div className="flex items-center space-x-3">
             {user && <NotificationCenter />}
@@ -262,11 +265,10 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
             {/* Brand */}
             <div className="md:col-span-2 lg:col-span-2">
               <div className="flex items-center space-x-3 mb-8">
-                <img 
-                  src="/src/assets/WhatsApp Image 2025-07-09 at 12.39.30_ad8335fd.jpg" 
-                  alt="Zaryah Logo" 
-                  className="h-12 lg:h-16 w-auto object-contain"
-                />
+                <div className="bg-primary-600 p-2 rounded-xl">
+                  <Sparkles className="w-6 h-6 text-white" />
+                </div>
+                <span className="text-2xl lg:text-3xl font-bold text-neutral-800 font-serif">Zaryah</span>
               </div>
               <p className="text-neutral-600 mb-6 lg:mb-8 max-w-md text-base lg:text-lg leading-relaxed">
                 Your path to meaningful connections through thoughtfully curated gifts. Every purchase tells a story 
