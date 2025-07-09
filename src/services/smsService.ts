@@ -53,23 +53,23 @@ class SMSService {
 
   // SMS Templates
   getOrderConfirmationSMS(orderId: string, totalAmount: number): string {
-    return `🎉 GiftFlare: Order ${orderId} confirmed! Total: ₹${(totalAmount / 100).toLocaleString()}. We'll update you on shipping. Track: giftflare.com/orders`;
+    return `🎉 Zaryah: Order ${orderId} confirmed! Total: ₹${(totalAmount / 100).toLocaleString()}. We'll update you on shipping. Track: zaryah.com/orders`;
   }
 
   getShippingUpdateSMS(orderId: string, trackingNumber: string): string {
-    return `📦 GiftFlare: Order ${orderId} shipped! Track with: ${trackingNumber}. Expected delivery in 3-7 days. Track: giftflare.com/orders`;
+    return `📦 Zaryah: Order ${orderId} shipped! Track with: ${trackingNumber}. Expected delivery in 3-7 days. Track: zaryah.com/orders`;
   }
 
   getInstantDeliveryUpdateSMS(orderId: string): string {
-    return `🚚 GiftFlare: Your instant delivery order ${orderId} is on the way! Delivery partner will contact you shortly. ETA: 2-4 hours.`;
+    return `🚚 Zaryah: Your instant delivery order ${orderId} is on the way! Delivery partner will contact you shortly. ETA: 2-4 hours.`;
   }
 
   getDeliveryConfirmationSMS(orderId: string): string {
-    return `✅ GiftFlare: Order ${orderId} delivered! Hope you love your handmade treasures. Rate your experience: giftflare.com/rate`;
+    return `✅ Zaryah: Order ${orderId} delivered! Hope you love your handmade treasures. Rate your experience: zaryah.com/rate`;
   }
 
   getDeliveryAttemptSMS(orderId: string): string {
-    return `📞 GiftFlare: Delivery attempted for order ${orderId}. Please ensure someone is available or reschedule: giftflare.com/delivery`;
+    return `📞 Zaryah: Delivery attempted for order ${orderId}. Please ensure someone is available or reschedule: zaryah.com/delivery`;
   }
 
   // Send specific SMS types
