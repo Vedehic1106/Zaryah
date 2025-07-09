@@ -103,14 +103,16 @@ export const RegisterPage: React.FC = () => {
         >
           <div className="text-center mb-6">
             <div className="flex justify-center mb-4">
-              <div className="bg-blush-600 p-4 rounded-2xl shadow-lg">
-                <Sparkles className="w-10 h-10 text-white" />
-              </div>
+              <img 
+                src="/src/assets/WhatsApp Image 2025-07-09 at 12.39.30_ad8335fd.jpg" 
+                alt="Zaryah Logo" 
+                className="h-20 w-auto object-contain"
+              />
             </div>
-            <h2 className="mt-2 text-4xl font-bold text-charcoal-900">
-              Join GiftFlare Community
+            <h2 className="mt-2 text-4xl font-bold text-primary-900">
+              Join Zaryah Community
             </h2>
-            <p className="mt-2 text-lg text-charcoal-600">
+            <p className="mt-2 text-lg text-primary-600">
               Create your account to start gifting
             </p>
           </div>
