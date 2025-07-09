@@ -187,7 +187,7 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ onClose }) => {
       <div className="text-center py-16">
         <div className="bg-yellow-100 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6">
           <CheckCircle className="w-10 h-10 text-yellow-500" />
-        </div>
+import { supabase, safeSupabaseOperation } from '../lib/supabase';
         <h3 className="text-3xl font-bold text-yellow-800 mb-4">Thank You for Your Order!</h3>
         <p className="text-lg text-yellow-700 mb-4 font-semibold">We truly appreciate your support for handmade gifts and artisans.</p>
         <p className="text-yellow-700 mb-6">
